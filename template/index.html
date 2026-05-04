@@ -1,0 +1,447 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OALDS · Orbital Asset & Launch Display System</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+
+    <style>
+      :root {
+        --bg: #000000;
+        --panel: rgba(8, 12, 20, 0.55);
+        --panel-border: rgba(180, 200, 230, 0.12);
+        --text: #e8ecf4;
+        --text-dim: #8b9bb8;
+        --text-faint: #4a5978;
+        --accent: #ff6b35;
+        --accent-glow: #ffaa00;
+        --cyan: #4fd1ff;
+        --green: #22d3a8;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      canvas { display: block; }
+
+      .hud {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+      .hud > * { pointer-events: auto; }
+
+      .topbar {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+      }
+      .brand { display: flex; align-items: center; gap: 14px; }
+      .brand-mark {
+        width: 38px; height: 38px;
+        display: grid; place-items: center;
+        background: var(--accent);
+        color: var(--bg);
+        font-family: 'Syne', sans-serif;
+        font-weight: 800; font-size: 18px;
+        box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        position: relative;
+      }
+      .brand-mark::after {
+        content: '';
+        position: absolute; inset: -4px;
+        border: 1px solid var(--accent);
+        opacity: 0.4;
+      }
+      .brand-text { line-height: 1; }
+      .brand-text .t1 {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700; font-size: 17px;
+        letter-spacing: 1px;
+      }
+      .brand-text .t2 {
+        font-size: 10px; color: var(--text-faint);
+        letter-spacing: 3px; margin-top: 5px;
+        text-transform: uppercase;
+      }
+
+      .top-status {
+        display: flex; align-items: center; gap: 24px;
+        font-size: 11px; letter-spacing: 1.5px;
+        text-transform: uppercase;
+      }
+      .status-item { color: var(--text-dim); }
+      .status-item .val { color: var(--text); margin-left: 8px; }
+      .live-pill {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 14px;
+        border: 1px solid var(--green);
+        color: var(--green);
+      }
+      .live-dot {
+        width: 6px; height: 6px;
+        background: var(--green);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--green);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.8); }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        backdrop-filter: blur(12px);
+      }
+      .panel-head {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--panel-border);
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .panel-head .title {
+        font-size: 10px; letter-spacing: 2.5px;
+        text-transform: uppercase; color: var(--text-dim);
+        display: flex; align-items: center; gap: 10px;
+      }
+      .panel-head .title::before {
+        content: '';
+        width: 6px; height: 6px;
+        background: var(--accent);
+      }
+      .panel-head .count {
+        font-size: 10px; color: var(--text-faint);
+        letter-spacing: 1.5px;
+      }
+
+      .left-panel {
+        position: absolute;
+        top: 100px; left: 32px;
+        width: 280px;
+      }
+      .site-list { max-height: 360px; overflow-y: auto; }
+      .site-item {
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(180, 200, 230, 0.06);
+        cursor: pointer;
+        transition: background 0.2s;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+      .site-item:hover { background: rgba(180, 200, 230, 0.05); }
+      .site-item:last-child { border-bottom: none; }
+      .site-marker {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+      }
+      .site-info .name { font-size: 12px; font-weight: 500; }
+      .site-info .coords {
+        font-size: 10px; color: var(--text-faint);
+        letter-spacing: 1px; margin-top: 2px;
+      }
+      .site-launch {
+        font-size: 10px; color: var(--accent);
+        letter-spacing: 1.5px; text-transform: uppercase;
+        opacity: 0; transition: opacity 0.2s;
+      }
+      .site-item:hover .site-launch { opacity: 1; }
+
+      .right-panel {
+        position: absolute;
+        top: 100px; right: 32px;
+        width: 280px;
+      }
+      .telem-grid {
+        padding: 18px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .telem-cell .label {
+        font-size: 9px; color: var(--text-faint);
+        letter-spacing: 2px; text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .telem-cell .value {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700; font-size: 22px;
+        color: var(--text); line-height: 1;
+      }
+      .telem-cell.accent .value { color: var(--accent); }
+
+      .log-panel {
+        position: absolute;
+        right: 32px; top: 320px;
+        width: 280px;
+      }
+      .log-list {
+        max-height: 240px; overflow-y: auto;
+        padding: 8px 0;
+      }
+      .log-entry {
+        padding: 8px 18px;
+        font-size: 11px;
+        border-left: 2px solid transparent;
+        display: flex; gap: 10px;
+        animation: logIn 0.3s ease-out;
+      }
+      @keyframes logIn {
+        from { opacity: 0; transform: translateX(10px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      .log-entry.launch { border-color: var(--accent); }
+      .log-entry.orbit  { border-color: var(--cyan); }
+      .log-entry.land   { border-color: var(--green); }
+      .log-entry .time {
+        color: var(--text-faint);
+        font-size: 10px; min-width: 56px;
+      }
+      .log-entry .msg {
+        color: var(--text-dim);
+        font-size: 11px; line-height: 1.4;
+      }
+
+      .bottom-hero {
+        position: absolute;
+        bottom: 32px; left: 32px;
+        max-width: 460px;
+      }
+      .hero-eyebrow {
+        font-size: 10px; letter-spacing: 4px;
+        text-transform: uppercase; color: var(--accent);
+        margin-bottom: 16px;
+        display: flex; align-items: center; gap: 12px;
+      }
+      .hero-eyebrow::before {
+        content: '';
+        width: 36px; height: 1px;
+        background: var(--accent);
+      }
+      .hero-title {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800; font-size: 56px;
+        line-height: 0.95; letter-spacing: -2px;
+        margin-bottom: 18px;
+      }
+      .hero-title em {
+        color: var(--accent);
+        font-style: italic; font-weight: 700;
+      }
+      .hero-sub {
+        font-size: 13px; color: var(--text-dim);
+        line-height: 1.7; margin-bottom: 24px;
+      }
+      .hero-actions { display: flex; gap: 12px; }
+      .btn {
+        padding: 11px 20px;
+        background: transparent;
+        border: 1px solid rgba(180, 200, 230, 0.25);
+        color: var(--text);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; letter-spacing: 2px;
+        text-transform: uppercase; cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn:hover {
+        border-color: var(--accent);
+        background: rgba(255, 107, 53, 0.1);
+      }
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+      }
+      .btn-primary:hover {
+        background: var(--accent-glow);
+        box-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
+      }
+
+      .mission-counter {
+        position: absolute;
+        bottom: 32px; right: 32px;
+        text-align: right;
+      }
+      .mission-counter .label {
+        font-size: 10px; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--text-faint);
+        margin-bottom: 8px;
+      }
+      .mission-counter .number {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800; font-size: 64px;
+        line-height: 1; color: var(--accent);
+        letter-spacing: -2px;
+      }
+      .mission-counter .sub {
+        font-size: 10px; color: var(--text-dim);
+        letter-spacing: 2px; text-transform: uppercase;
+        margin-top: 4px;
+      }
+
+      .rocket-popup {
+        position: fixed;
+        background: var(--panel);
+        border: 1px solid var(--accent);
+        backdrop-filter: blur(12px);
+        padding: 12px 16px;
+        font-size: 11px;
+        min-width: 200px;
+        pointer-events: none;
+        z-index: 20;
+        display: none;
+      }
+      .rocket-popup .name {
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+      .rocket-popup .row {
+        display: flex; justify-content: space-between;
+        color: var(--text-dim);
+        margin-top: 4px;
+      }
+      .rocket-popup .row span:last-child { color: var(--text); }
+
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(180, 200, 230, 0.2); }
+
+      @media (max-width: 1100px) {
+        .left-panel, .right-panel, .log-panel { display: none; }
+        .hero-title { font-size: 40px; }
+      }
+      @media (max-width: 600px) {
+        .topbar { padding: 14px 18px; }
+        .top-status { display: none; }
+        .bottom-hero { left: 18px; bottom: 18px; max-width: calc(100% - 36px); }
+        .hero-title { font-size: 32px; }
+        .mission-counter { display: none; }
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.webgpu.js",
+          "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.webgpu.js",
+          "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.181.0/build/three.tsl.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="hud">
+      <div class="topbar">
+        <div class="brand">
+          <div class="brand-mark">O</div>
+          <div class="brand-text">
+            <div class="t1">OALDS</div>
+            <div class="t2">Mission Control · v1.0</div>
+          </div>
+        </div>
+        <div class="top-status">
+          <div class="status-item">UTC <span class="val" id="utc-time">--:--:--</span></div>
+          <div class="status-item">ORBIT <span class="val">LEO/GTO/SSO</span></div>
+          <div class="live-pill">
+            <span class="live-dot"></span>
+            <span>LIVE FEED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-panel panel">
+        <div class="panel-head">
+          <div class="title">Launch Sites</div>
+          <div class="count">06 ACTIVE</div>
+        </div>
+        <div class="site-list" id="site-list"></div>
+      </div>
+
+      <div class="right-panel panel">
+        <div class="panel-head">
+          <div class="title">Telemetry</div>
+          <div class="count">REAL-TIME</div>
+        </div>
+        <div class="telem-grid">
+          <div class="telem-cell accent">
+            <div class="label">Active</div>
+            <div class="value" id="t-active">0</div>
+          </div>
+          <div class="telem-cell">
+            <div class="label">In Orbit</div>
+            <div class="value" id="t-orbit">0</div>
+          </div>
+          <div class="telem-cell">
+            <div class="label">Boosters</div>
+            <div class="value">24</div>
+          </div>
+          <div class="telem-cell">
+            <div class="label">Payloads</div>
+            <div class="value">142</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="log-panel panel">
+        <div class="panel-head">
+          <div class="title">Mission Log</div>
+          <div class="count">FEED</div>
+        </div>
+        <div class="log-list" id="log-list"></div>
+      </div>
+
+      <div class="bottom-hero">
+        <div class="hero-eyebrow">Orbital Asset & Launch Display System</div>
+        <h1 class="hero-title">From Earth.<br /><em>To Orbit.</em></h1>
+        <p class="hero-sub">
+          Tracking reusable boosters, scheduling missions, and watching every payload climb out of the atmosphere — in real time.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="launch-btn">▲ Launch Mission</button>
+          <button class="btn">Browse Fleet</button>
+        </div>
+      </div>
+
+      <div class="mission-counter">
+        <div class="label">Total Launches</div>
+        <div class="number" id="launch-count">000</div>
+        <div class="sub">Since Session Start</div>
+      </div>
+
+      <div class="rocket-popup" id="rocket-popup">
+        <div class="name" id="rp-name"></div>
+        <div class="row"><span>Site</span><span id="rp-site"></span></div>
+        <div class="row"><span>Phase</span><span id="rp-phase"></span></div>
+        <div class="row"><span>Booster</span><span id="rp-booster"></span></div>
+      </div>
+    </div>
+
+    <script type="module" src="{% static 'js/index.js' %}"></script>
+  </body>
+</html>
