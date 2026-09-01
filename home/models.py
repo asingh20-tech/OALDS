@@ -17,7 +17,7 @@ class Rocket(models.Model):
     first_flight = models.DateField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'rockets'
 
     def __str__(self):
@@ -34,7 +34,7 @@ class LaunchSite(models.Model):
     active = models.BooleanField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'launch_sites'
 
     def __str__(self):
@@ -49,7 +49,7 @@ class Booster(models.Model):
     flight_count = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'boosters'
 
     def __str__(self):
@@ -66,7 +66,7 @@ class Mission(models.Model):
     outcome = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'missions'
 
     def __str__(self):
@@ -82,7 +82,7 @@ class Payload(models.Model):
     payload_type = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'payloads'
 
     def __str__(self):
@@ -98,7 +98,7 @@ class BoosterFlight(models.Model):
     flight_number = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'booster_flights'
 
     def __str__(self):
