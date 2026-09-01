@@ -16,13 +16,6 @@ Creating an interface (both an admin panel for data entry and a frontend visuali
 
 Try Here : https://oalds.onrender.com/
 
-## Deploy a fresh copy on Render
 
-This repository now includes a Render Blueprint, Django migrations, and the initial OALDS dataset. A new deployment automatically creates its PostgreSQL tables and loads the launch sites, rockets, missions, payloads, boosters, and flight records.
 
-1. Push this project to a GitHub repository.
-2. In Render, select **New > Blueprint**.
-3. Connect the repository and select `render.yaml`.
-4. Select **Apply** and wait for the database and web service to finish deploying.
 
-No database commands or manual environment variables are required when deploying through the Blueprint. Render generates the secret key and connects the web service to the new PostgreSQL database automatically.
