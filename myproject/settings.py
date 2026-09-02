@@ -8,17 +8,19 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-vfd_s=!6-99vk9lycxei#d9dlk2s^=zak5no-a3&_jp@_3fctl'
-)
+IS_RENDER = os.environ.get('RENDER') is not None
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-development-only')
+DEBUG = os.environ.get('DEBUG', 'False' if IS_RENDER else 'True').lower() == 'true'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+CSRF_TRUSTED_ORIGINS = []
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 # Application definition
 INSTALLED_APPS = [
@@ -66,7 +68,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default='postgres://adityarajsingh@localhost:5432/rockets_db',
         conn_max_age=600,
-        ssl_require=not DEBUG,
+        ssl_require=IS_RENDER,
     )
 }
 
